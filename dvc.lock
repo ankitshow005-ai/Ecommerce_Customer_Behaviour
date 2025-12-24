@@ -66,3 +66,21 @@ stages:
       md5: 61a045745e9198a2cf9f9885b523327a.dir
       size: 8551162
       nfiles: 1
+  data_split_encode:
+    cmd: python src/data_split_encode.py
+    deps:
+    - path: data_processed/featured
+      hash: md5
+      md5: 61a045745e9198a2cf9f9885b523327a.dir
+      size: 8551162
+      nfiles: 1
+    - path: src/data_split_encode.py
+      hash: md5
+      md5: e64add34a4013e58964f3cff8983105c
+      size: 4755
+    outs:
+    - path: data_processed/dependency_split
+      hash: md5
+      md5: 39cc46fdb729a6aaaaa3e475201be082.dir
+      size: 7812039
+      nfiles: 5

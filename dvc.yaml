@@ -25,3 +25,10 @@ stages:
     - src/feature_engineering.py
     outs:
     - data_processed/featured
+  data_split_encode:
+    cmd: python src/data_split_encode.py
+    deps:
+    - data_processed/featured
+    - src/data_split_encode.py
+    outs:
+    - data_processed/dependency_split

@@ -37,7 +37,7 @@ if not logger.handlers:
 
 def load_feature_data(file_path: str) -> pd.DataFrame:
     """
-    Load final feature engineered dataset.
+    Load feature-engineered dataset.
     """
     df = pd.read_csv(file_path)
     logger.info(f"Loaded feature data | Shape: {df.shape}")
@@ -57,18 +57,22 @@ def perform_train_test_split(
     X, y, test_size=0.2, random_state=42
 ):
     """
-    Perform train–test split.
+    Perform stratified train–test split.
+    Stratification is important for churn (imbalanced classification).
     """
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
         test_size=test_size,
-        random_state=random_state
+        random_state=random_state,
+        stratify=y
     )
 
     logger.info("Train–test split completed")
     logger.info(f"X_train shape: {X_train.shape}")
     logger.info(f"X_test shape: {X_test.shape}")
+    logger.info(f"y_train distribution:\n{y_train.value_counts(normalize=True)}")
+    logger.info(f"y_test distribution:\n{y_test.value_counts(normalize=True)}")
 
     return X_train, X_test, y_train, y_test
 
@@ -76,7 +80,7 @@ def perform_train_test_split(
 def encode_categorical_features(X_train, X_test):
     """
     Apply Label Encoding to categorical columns.
-    Encoder is fit ONLY on training data.
+    Encoders are fit ONLY on training data to avoid data leakage.
     """
     cat_cols = [col for col in X_train.columns if X_train[col].dtype == "O"]
     encoders = {}
@@ -98,6 +102,7 @@ def save_dependency_split(
 ):
     """
     Save train/test splits and encoders.
+    These artifacts are dependencies for all downstream models.
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -109,7 +114,7 @@ def save_dependency_split(
     with open(os.path.join(output_dir, "label_encoders.pkl"), "wb") as f:
         pickle.dump(encoders, f)
 
-    logger.info("Dependency split data saved successfully")
+    logger.info("Dependency split artifacts saved successfully")
 
 # ============================================================
 # MAIN EXECUTION
@@ -118,13 +123,14 @@ def save_dependency_split(
 def main():
     """
     Pipeline:
-    features.csv
-      → train-test split
-      → label encoding
-      → save dependency split
+    data_processed/featured/features.csv
+        →
+    train-test split + encoding
+        →
+    data_processed/dependency_split/
     """
 
-    INPUT_PATH = "data_processed/features.csv"
+    INPUT_PATH = "data_processed/featured/features.csv"
     OUTPUT_DIR = "data_processed/dependency_split"
     TARGET_COLUMN = "Churned"
 
