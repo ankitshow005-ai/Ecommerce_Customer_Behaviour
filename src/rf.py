@@ -216,7 +216,7 @@ def main():
 
     config = load_rf_config()
     variant = "tuned" if config.get("tuning", False) else "baseline"
-    OUTPUT_DIR = f"models/random_forest/{variant}"
+    OUTPUT_DIR = f"models/rf_{variant}"
 
     # Create output directory early
     os.makedirs(OUTPUT_DIR, exist_ok=True)

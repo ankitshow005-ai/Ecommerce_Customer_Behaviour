@@ -184,3 +184,25 @@ stages:
       md5: 5d5f7ff9f1bccd799c17a081231d44ff.dir
       size: 183145979
       nfiles: 3
+  rf_feature_selection:
+    cmd: python src/rf_fs.py
+    deps:
+    - path: data_processed/dependency_split
+      hash: md5
+      md5: 39cc46fdb729a6aaaaa3e475201be082.dir
+      size: 7812039
+      nfiles: 5
+    - path: src/rf_fs.py
+      hash: md5
+      md5: 822f922b6cb9af445338d9f24018eb75
+      size: 6526
+    params:
+      params.yaml:
+        random_forest.final_params:
+          n_estimators: 250
+    outs:
+    - path: models/rf_feature_selection
+      hash: md5
+      md5: 045ee01bdb4f9d35ea5568ec0c95e16d.dir
+      size: 130818482
+      nfiles: 4

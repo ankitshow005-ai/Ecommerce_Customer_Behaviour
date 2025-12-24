@@ -50,3 +50,12 @@ stages:
     - random_forest
     outs:
     - models/random_forest
+  rf_feature_selection:
+    cmd: python src/rf_fs.py
+    deps:
+    - data_processed/dependency_split
+    - src/rf_fs.py
+    params:
+    - random_forest.final_params
+    outs:
+    - models/rf_feature_selection

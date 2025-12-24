@@ -171,7 +171,7 @@ def save_artifacts(
 
 def main():
     SPLIT_DIR = "data_processed/dependency_split"
-    OUTPUT_DIR = "models/random_forest/tuned_feature_selection"
+    OUTPUT_DIR = "models/rf_feature_selection"
     FEATURE_THRESHOLD = 90.0
 
     logger.info("Starting RF Feature Selection pipeline")
