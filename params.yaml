@@ -1,0 +1,76 @@
+# ============================================================
+# DECISION TREE CONFIGURATION
+# ============================================================
+
+decision_tree:
+  # If false → baseline DT
+  # If true  → GridSearchCV DT
+  tuning: false
+
+  # ----------------------------
+  # BASELINE DECISION TREE
+  # ----------------------------
+  params:
+    max_depth: null
+    min_samples_split: 2
+    min_samples_leaf: 1
+    criterion: gini
+
+  # ----------------------------
+  # GRID SEARCH PARAMETERS
+  # ----------------------------
+  param_grid:
+    max_depth: [6, 7, 8, 9, 10, 11, 12]
+    min_samples_split: [2, 4, 6, 8]
+    min_samples_leaf: [1, 2, 3, 4]
+    criterion: [gini, entropy, log_loss]
+
+  cv: 5
+
+
+# ============================================================
+# RANDOM FOREST CONFIGURATION
+# ============================================================
+
+random_forest:
+  # If false → baseline RF
+  # If true  → GridSearch + final RF (n_estimators fixed)
+  tuning: true
+
+  # ----------------------------
+  # BASELINE RANDOM FOREST
+  # ----------------------------
+  baseline_params:
+    max_depth: null
+    min_samples_split: 2
+    min_samples_leaf: 1
+    bootstrap: true
+    n_jobs: -1
+
+  # ----------------------------
+  # GRID SEARCH (STRUCTURAL PARAMS)
+  # ----------------------------
+  param_grid:
+    criterion: [gini, entropy]
+    bootstrap: [true, false]
+    max_features: [sqrt, log2, null]
+
+  cv: 5
+
+  # ----------------------------
+  # FINAL MODEL PARAMS
+  # (derived from OOB analysis in notebook)
+  # ----------------------------
+  final_params:
+    n_estimators: 250
+
+  # ----------------------------
+  # THRESHOLD CONFIGURATION
+  # ----------------------------
+  threshold:
+    enabled: true
+    value: 0.40
+    sweep:
+      start: 0.30
+      end: 0.60
+      step: 0.05

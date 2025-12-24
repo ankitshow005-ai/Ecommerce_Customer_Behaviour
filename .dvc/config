@@ -1,4 +1,1 @@
-[core]
-    remote = aws_storage
-['remote "aws_storage"']
-    url = ../S3
+
