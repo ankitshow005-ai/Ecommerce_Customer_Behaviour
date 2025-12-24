@@ -84,3 +84,54 @@ stages:
       md5: 39cc46fdb729a6aaaaa3e475201be082.dir
       size: 7812039
       nfiles: 5
+  decision_tree:
+    cmd: python src/dt.py
+    deps:
+    - path: data_processed/dependency_split
+      hash: md5
+      md5: 39cc46fdb729a6aaaaa3e475201be082.dir
+      size: 7812039
+      nfiles: 5
+    - path: src/dt.py
+      hash: md5
+      md5: a9dd5e5160031442d5f67cb53a83921a
+      size: 5251
+    params:
+      params.yaml:
+        decision_tree:
+          tuning: false
+          params:
+            max_depth:
+            min_samples_split: 2
+            min_samples_leaf: 1
+            criterion: gini
+          param_grid:
+            max_depth:
+            - 6
+            - 7
+            - 8
+            - 9
+            - 10
+            - 11
+            - 12
+            min_samples_split:
+            - 2
+            - 4
+            - 6
+            - 8
+            min_samples_leaf:
+            - 1
+            - 2
+            - 3
+            - 4
+            criterion:
+            - gini
+            - entropy
+            - log_loss
+          cv: 5
+    outs:
+    - path: models/decision_tree
+      hash: md5
+      md5: f54fbda9962f59ec2a9c9bcc8e9dffd0.dir
+      size: 518169
+      nfiles: 2

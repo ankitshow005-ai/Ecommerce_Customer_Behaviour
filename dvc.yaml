@@ -32,3 +32,12 @@ stages:
     - src/data_split_encode.py
     outs:
     - data_processed/dependency_split
+  decision_tree:
+    cmd: python src/dt.py
+    deps:
+    - data_processed/dependency_split
+    - src/dt.py
+    params:
+    - decision_tree
+    outs:
+    - models/decision_tree
