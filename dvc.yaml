@@ -11,3 +11,10 @@ stages:
     deps:
     - data_processed/raw
     - src/data_validation.py
+  data_preprocessing:
+    cmd: python src/data_preprocessing.py
+    deps:
+    - data_processed/raw
+    - src/data_preprocessing.py
+    outs:
+    - data_processed/cleaned
