@@ -7,7 +7,12 @@ import numpy as np
 import pandas as pd
 
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score
+)
 
 # ============================================================
 # LOGGING SETUP
@@ -44,55 +49,73 @@ def load_dependency_split(split_dir: str):
     y_test = pd.read_csv(os.path.join(split_dir, "y_test.csv")).squeeze()
 
     logger.info("Loaded dependency split data")
+    logger.info(f"X_train shape: {X_train.shape}")
+    logger.info(f"X_test shape: {X_test.shape}")
+
     return X_train, X_test, y_train, y_test
 
 # ============================================================
 # PARAMS LOADING
 # ============================================================
 
-def load_rf_fs_config():
+def load_rf_config():
     with open("params.yaml", "r") as f:
         params = yaml.safe_load(f)
 
-    return params["random_forest_feature_selection"]
+    return params["random_forest"]
 
 # ============================================================
-# FEATURE IMPORTANCE + SELECTION
+# TRAIN BASE RF (FOR FEATURE IMPORTANCE)
 # ============================================================
 
-def compute_feature_importance(model, feature_names):
+def train_base_rf(X_train, y_train, config):
+    """
+    Train RF using tuned structural params and final n_estimators.
+    """
+    logger.info("Training Random Forest for feature importance")
+
+    model = RandomForestClassifier(
+        **config["final_params"],
+        random_state=42,
+        n_jobs=-1
+    )
+
+    model.fit(X_train, y_train)
+    return model
+
+# ============================================================
+# FEATURE IMPORTANCE LOGIC
+# ============================================================
+
+def extract_feature_importance(model, feature_names):
     importances = model.feature_importances_
 
     df = pd.DataFrame({
-        "column_name": feature_names,
-        "mean_impurity": importances
-    })
+        "feature": feature_names,
+        "importance": importances
+    }).sort_values(by="importance", ascending=False)
 
-    df["percentage_impurity"] = round(df["mean_impurity"] * 100, 3)
-    df = df.sort_values(by="percentage_impurity", ascending=False)
-    df["cum_impurity"] = df["percentage_impurity"].cumsum()
+    df["importance_pct"] = df["importance"] * 100
+    df["cumulative_importance"] = df["importance_pct"].cumsum()
 
-    df = df.reset_index(drop=True)
-    return df
+    return df.reset_index(drop=True)
 
-def select_features(importance_df, threshold):
-    selected_features = list(
-        importance_df[importance_df["cum_impurity"] <= threshold]["column_name"]
-    )
 
-    logger.info(f"Selected {len(selected_features)} features using {threshold}% threshold")
-    return selected_features
+def select_features(df, threshold=90.0):
+    selected = df[df["cumulative_importance"] <= threshold]["feature"].tolist()
+    logger.info(f"Selected {len(selected)} features using {threshold}% threshold")
+    return selected
 
 # ============================================================
-# MODEL TRAINING
+# FINAL MODEL TRAINING
 # ============================================================
 
-def train_random_forest(X_train, y_train, params):
+def train_final_model(X_train, y_train, config):
     model = RandomForestClassifier(
-        **params,
-        random_state=42
+        **config["final_params"],
+        random_state=42,
+        n_jobs=-1
     )
-
     model.fit(X_train, y_train)
     return model
 
@@ -107,7 +130,7 @@ def evaluate_model(model, X_test, y_test):
         "accuracy": round(accuracy_score(y_test, y_pred), 4),
         "precision": round(precision_score(y_test, y_pred), 4),
         "recall": round(recall_score(y_test, y_pred), 4),
-        "f1_score": round(f1_score(y_test, y_pred), 4)
+        "f1_score": round(f1_score(y_test, y_pred), 4),
     }
 
     logger.info(f"Evaluation metrics: {metrics}")
@@ -117,76 +140,70 @@ def evaluate_model(model, X_test, y_test):
 # SAVE ARTIFACTS
 # ============================================================
 
-def save_artifacts(model, metrics, importance_df, selected_features, output_dir):
+def save_artifacts(
+    model,
+    metrics,
+    importance_df,
+    selected_features,
+    output_dir
+):
     os.makedirs(output_dir, exist_ok=True)
 
-    # Save model
     with open(os.path.join(output_dir, "model.pkl"), "wb") as f:
         pickle.dump(model, f)
 
-    # Save metrics
     with open(os.path.join(output_dir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
 
-    # Save feature importance
     importance_df.to_csv(
         os.path.join(output_dir, "feature_importance.csv"),
         index=False
     )
 
-    # Save selected features
     with open(os.path.join(output_dir, "selected_features.json"), "w") as f:
         json.dump(selected_features, f, indent=4)
 
-    logger.info("Artifacts saved successfully")
+    logger.info("All artifacts saved successfully")
 
 # ============================================================
-# MAIN
+# MAIN PIPELINE
 # ============================================================
 
 def main():
     SPLIT_DIR = "data_processed/dependency_split"
     OUTPUT_DIR = "models/random_forest/tuned_feature_selection"
+    FEATURE_THRESHOLD = 90.0
 
-    logger.info("Starting Random Forest Feature Selection pipeline")
+    logger.info("Starting RF Feature Selection pipeline")
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     X_train, X_test, y_train, y_test = load_dependency_split(SPLIT_DIR)
-    config = load_rf_fs_config()
+    config = load_rf_config()
 
-    # Step 1: Train base RF model
-    base_model = train_random_forest(
-        X_train,
-        y_train,
-        config["base_model_params"]
-    )
+    # Train RF for importance
+    base_model = train_base_rf(X_train, y_train, config)
 
-    # Step 2: Compute feature importance
-    importance_df = compute_feature_importance(
+    # Feature importance
+    importance_df = extract_feature_importance(
         base_model,
         X_train.columns.tolist()
     )
 
-    # Step 3: Select features
     selected_features = select_features(
         importance_df,
-        config["cumulative_importance_threshold"]
+        FEATURE_THRESHOLD
     )
 
-    # Step 4: Filter data
-    X_train_fs = X_train[selected_features]
-    X_test_fs = X_test[selected_features]
+    # Filter data
+    X_train_sel = X_train[selected_features]
+    X_test_sel = X_test[selected_features]
 
-    # Step 5: Retrain RF on selected features
-    final_model = train_random_forest(
-        X_train_fs,
-        y_train,
-        config["final_model_params"]
-    )
+    # Train final model
+    final_model = train_final_model(X_train_sel, y_train, config)
 
-    # Step 6: Evaluate
-    metrics = evaluate_model(final_model, X_test_fs, y_test)
+    metrics = evaluate_model(final_model, X_test_sel, y_test)
 
-    # Step 7: Save everything
     save_artifacts(
         final_model,
         metrics,
@@ -195,7 +212,7 @@ def main():
         OUTPUT_DIR
     )
 
-    logger.info("Random Forest Feature Selection pipeline completed")
+    logger.info("RF Feature Selection pipeline completed successfully")
 
 # ============================================================
 # ENTRY POINT

@@ -41,3 +41,12 @@ stages:
     - decision_tree
     outs:
     - models/decision_tree
+  random_forest:
+    cmd: python src/rf.py
+    deps:
+    - data_processed/dependency_split
+    - src/rf.py
+    params:
+    - random_forest
+    outs:
+    - models/random_forest
