@@ -27,24 +27,27 @@ logger = logging.getLogger("random_forest")
 logger.setLevel(logging.INFO)
 
 if not logger.handlers:
-    ch = logging.StreamHandler()
-    fh = logging.FileHandler(os.path.join(LOG_DIR, "rf.log"))
+    console_handler = logging.StreamHandler()
+    file_handler = logging.FileHandler(os.path.join(LOG_DIR, "rf.log"))
 
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
-    ch.setFormatter(formatter)
-    fh.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
 
-    logger.addHandler(ch)
-    logger.addHandler(fh)
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
 
 # ============================================================
 # DATA LOADING
 # ============================================================
 
 def load_dependency_split(split_dir: str):
+    """
+    Load train-test split data prepared earlier.
+    """
     X_train = pd.read_csv(os.path.join(split_dir, "X_train.csv"))
     X_test = pd.read_csv(os.path.join(split_dir, "X_test.csv"))
     y_train = pd.read_csv(os.path.join(split_dir, "y_train.csv")).squeeze()
@@ -61,6 +64,9 @@ def load_dependency_split(split_dir: str):
 # ============================================================
 
 def load_rf_config():
+    """
+    Load Random Forest configuration from params.yaml.
+    """
     with open("params.yaml", "r") as f:
         params = yaml.safe_load(f)
 
@@ -72,13 +78,18 @@ def load_rf_config():
 
 def train_random_forest(X_train, y_train, config: dict):
     """
+    Train Random Forest model.
+
     If tuning = False:
-        Train baseline Random Forest.
+        → Baseline Random Forest
+
     If tuning = True:
-        GridSearch structural params, then train FINAL model
-        with fixed n_estimators (from notebook OOB analysis).
+        → GridSearchCV on structural params
+        → Final model trained with fixed n_estimators
     """
-    if not config["tuning"]:
+
+    # ---------------- BASELINE RF ----------------
+    if not config.get("tuning", False):
         logger.info("Training BASELINE Random Forest")
 
         model = RandomForestClassifier(
@@ -88,7 +99,8 @@ def train_random_forest(X_train, y_train, config: dict):
         model.fit(X_train, y_train)
         return model
 
-    logger.info("Training TUNED Random Forest (final model)")
+    # ---------------- TUNED RF ----------------
+    logger.info("Training TUNED Random Forest")
 
     base_model = RandomForestClassifier(random_state=42)
 
@@ -101,13 +113,13 @@ def train_random_forest(X_train, y_train, config: dict):
     )
 
     grid.fit(X_train, y_train)
-    best_params = grid.best_params_
 
+    best_params = grid.best_params_
     logger.info(f"Best structural params from GridSearch: {best_params}")
 
     final_model = RandomForestClassifier(
         **best_params,
-        **config["final_params"],  # n_estimators = 250
+        **config["final_params"],   # n_estimators = 250
         random_state=42
     )
 
@@ -115,10 +127,13 @@ def train_random_forest(X_train, y_train, config: dict):
     return final_model
 
 # ============================================================
-# THRESHOLD SWEEP
+# THRESHOLD SWEEP (OPTIONAL)
 # ============================================================
 
 def threshold_sweep(model, X_test, y_test, sweep_cfg, output_dir):
+    """
+    Perform threshold sweep analysis and save results.
+    """
     y_proba = model.predict_proba(X_test)[:, 1]
 
     thresholds = np.arange(
@@ -145,7 +160,10 @@ def threshold_sweep(model, X_test, y_test, sweep_cfg, output_dir):
         })
 
     df = pd.DataFrame(results)
-    df.to_csv(os.path.join(output_dir, "threshold_analysis.csv"), index=False)
+    df.to_csv(
+        os.path.join(output_dir, "threshold_analysis.csv"),
+        index=False
+    )
 
     logger.info("Threshold sweep completed")
 
@@ -154,6 +172,9 @@ def threshold_sweep(model, X_test, y_test, sweep_cfg, output_dir):
 # ============================================================
 
 def evaluate_model(model, X_test, y_test, threshold):
+    """
+    Evaluate model using specified threshold.
+    """
     y_proba = model.predict_proba(X_test)[:, 1]
     y_pred = (y_proba >= threshold).astype(int)
 
@@ -173,6 +194,9 @@ def evaluate_model(model, X_test, y_test, threshold):
 # ============================================================
 
 def save_artifacts(model, metrics, output_dir):
+    """
+    Save trained model and metrics.
+    """
     os.makedirs(output_dir, exist_ok=True)
 
     with open(os.path.join(output_dir, "model.pkl"), "wb") as f:
@@ -181,18 +205,21 @@ def save_artifacts(model, metrics, output_dir):
     with open(os.path.join(output_dir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
 
-    logger.info("Model and metrics saved")
+    logger.info("Model and metrics saved successfully")
 
 # ============================================================
-# MAIN
+# MAIN PIPELINE
 # ============================================================
 
 def main():
     SPLIT_DIR = "data_processed/dependency_split"
 
     config = load_rf_config()
-    variant = "tuned" if config["tuning"] else "baseline"
+    variant = "tuned" if config.get("tuning", False) else "baseline"
     OUTPUT_DIR = f"models/random_forest/{variant}"
+
+    # Create output directory early
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     logger.info(f"Starting Random Forest pipeline ({variant})")
 
@@ -200,8 +227,13 @@ def main():
 
     model = train_random_forest(X_train, y_train, config)
 
+    # ---------------- OPTIONAL THRESHOLD LOGIC ----------------
     threshold_cfg = config.get("threshold", {})
-    if threshold_cfg.get("enabled", False):
+    threshold_enabled = threshold_cfg.get("enabled", False)
+
+    if threshold_enabled:
+        logger.info("Threshold optimization ENABLED")
+
         threshold_sweep(
             model,
             X_test,
@@ -210,12 +242,16 @@ def main():
             OUTPUT_DIR
         )
 
-    final_threshold = threshold_cfg.get("value", 0.5)
+        final_threshold = threshold_cfg.get("value", 0.5)
+    else:
+        logger.info("Threshold optimization DISABLED")
+        final_threshold = 0.5
+
     metrics = evaluate_model(model, X_test, y_test, final_threshold)
 
     save_artifacts(model, metrics, OUTPUT_DIR)
 
-    logger.info("Random Forest pipeline completed")
+    logger.info("Random Forest pipeline completed successfully")
 
 # ============================================================
 # ENTRY POINT

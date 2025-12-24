@@ -135,3 +135,52 @@ stages:
       md5: f54fbda9962f59ec2a9c9bcc8e9dffd0.dir
       size: 518169
       nfiles: 2
+  random_forest:
+    cmd: python src/rf.py
+    deps:
+    - path: data_processed/dependency_split
+      hash: md5
+      md5: 39cc46fdb729a6aaaaa3e475201be082.dir
+      size: 7812039
+      nfiles: 5
+    - path: src/rf.py
+      hash: md5
+      md5: 206b962c724ecc4f89ef04da90b9c37d
+      size: 7775
+    params:
+      params.yaml:
+        random_forest:
+          tuning: true
+          baseline_params:
+            max_depth:
+            min_samples_split: 2
+            min_samples_leaf: 1
+            bootstrap: true
+            n_jobs: -1
+          param_grid:
+            criterion:
+            - gini
+            - entropy
+            bootstrap:
+            - true
+            - false
+            max_features:
+            - sqrt
+            - log2
+            - 
+          cv: 5
+          final_params:
+            n_estimators: 250
+          threshold:
+            enabled: true
+            value: 0.4
+            sweep:
+              start: 0.3
+              end: 0.6
+              step: 0.05
+    outs:
+    - path: models/random_forest
+      hash: md5
+      md5: 5d5f7ff9f1bccd799c17a081231d44ff.dir
+      size: 183145979
+      nfiles: 3
