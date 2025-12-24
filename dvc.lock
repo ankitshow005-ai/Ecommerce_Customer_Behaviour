@@ -18,3 +18,15 @@ stages:
       md5: 6bf743a3b687796ee82cacf0f3c22df1.dir
       size: 6050941
       nfiles: 1
+  data_validation:
+    cmd: python src/data_validation.py
+    deps:
+    - path: data_processed/raw
+      hash: md5
+      md5: 6bf743a3b687796ee82cacf0f3c22df1.dir
+      size: 6050941
+      nfiles: 1
+    - path: src/data_validation.py
+      hash: md5
+      md5: a1729f007d43c022f9e7fc7819131bf4
+      size: 4659

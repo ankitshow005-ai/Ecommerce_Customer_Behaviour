@@ -89,7 +89,7 @@ def get_columns_to_remove(
 # ============================================================
 
 def main():
-    DATA_PATH = "data_processed/ingested.csv"
+    DATA_PATH = "data_processed/raw/ingested.csv"
 
     logger.info("Starting data validation stage")
 
