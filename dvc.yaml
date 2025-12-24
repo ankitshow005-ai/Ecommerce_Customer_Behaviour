@@ -18,3 +18,10 @@ stages:
     - src/data_preprocessing.py
     outs:
     - data_processed/cleaned
+  feature_engineering:
+    cmd: python src/feature_engineering.py
+    deps:
+    - data_processed/cleaned
+    - src/feature_engineering.py
+    outs:
+    - data_processed/featured

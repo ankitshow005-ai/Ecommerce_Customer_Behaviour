@@ -33,9 +33,6 @@ if not logger.handlers:
 # ============================================================
 
 def create_engagement_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create engagement-based features capturing user activity levels.
-    """
     engagement_cols = [
         "Login_Frequency",
         "Session_Duration_Avg",
@@ -46,7 +43,6 @@ def create_engagement_features(df: pd.DataFrame) -> pd.DataFrame:
     ]
 
     df["engagement_score"] = df[engagement_cols].mean(axis=1)
-
     threshold = df["engagement_score"].quantile(0.25)
     df["low_engagement_flag"] = (df["engagement_score"] <= threshold).astype(int)
 
@@ -55,9 +51,6 @@ def create_engagement_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_recency_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create recency and inactivity-related features.
-    """
     threshold = df["Days_Since_Last_Purchase"].quantile(0.75)
     df["inactive_flag"] = (df["Days_Since_Last_Purchase"] >= threshold).astype(int)
 
@@ -66,9 +59,6 @@ def create_recency_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_engagement_recency_interaction(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create interaction feature between engagement and recency.
-    """
     df["engagement_recency_risk"] = (
         df["low_engagement_flag"] * df["inactive_flag"]
     )
@@ -78,16 +68,12 @@ def create_engagement_recency_interaction(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_friction_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create features capturing user friction and dissatisfaction.
-    """
     friction_cols = [
         "Cart_Abandonment_Rate",
         "Customer_Service_Calls",
     ]
 
     df["friction_score"] = df[friction_cols].mean(axis=1)
-
     threshold = df["friction_score"].quantile(0.75)
     df["high_friction_flag"] = (df["friction_score"] >= threshold).astype(int)
 
@@ -96,9 +82,6 @@ def create_friction_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_loyalty_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create loyalty and commitment-related features.
-    """
     loyalty_cols = [
         "Total_Purchases",
         "Product_Reviews_Written",
@@ -106,7 +89,6 @@ def create_loyalty_features(df: pd.DataFrame) -> pd.DataFrame:
     ]
 
     df["loyalty_score"] = df[loyalty_cols].mean(axis=1)
-
     threshold = df["loyalty_score"].quantile(0.25)
     df["low_loyalty_flag"] = (df["loyalty_score"] <= threshold).astype(int)
 
@@ -115,15 +97,12 @@ def create_loyalty_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def save_featured_data(df: pd.DataFrame, output_path: str) -> None:
-    """
-    Save dataset with engineered features.
-    """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False)
     logger.info(f"Feature engineered data saved to {output_path}")
 
 # ============================================================
-# MAIN PIPELINE EXECUTION
+# MAIN EXECUTION
 # ============================================================
 
 def main():
@@ -131,22 +110,18 @@ def main():
     Feature engineering pipeline.
 
     Flow:
-    preprocessed.csv
-      → engagement features
-      → recency features
-      → interaction features
-      → friction features
-      → loyalty features
-      → features.csv
+    data_processed/cleaned/cleaned.csv
+        →
+    data_processed/featured/features.csv
     """
 
-    INPUT_PATH = "data_processed/preprocessed.csv"
-    OUTPUT_PATH = "data_processed/features.csv"
+    INPUT_PATH = "data_processed/cleaned/cleaned.csv"
+    OUTPUT_PATH = "data_processed/featured/features.csv"
 
     logger.info("Starting feature engineering stage")
 
     df = pd.read_csv(INPUT_PATH)
-    logger.info(f"Loaded preprocessed data | Shape: {df.shape}")
+    logger.info(f"Loaded cleaned data | Shape: {df.shape}")
 
     df = create_engagement_features(df)
     df = create_recency_features(df)
@@ -159,7 +134,7 @@ def main():
     logger.info("Feature engineering stage completed successfully")
 
 # ============================================================
-# SCRIPT ENTRY POINT
+# ENTRY POINT
 # ============================================================
 
 if __name__ == "__main__":
