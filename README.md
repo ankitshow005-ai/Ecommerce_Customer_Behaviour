@@ -1,122 +1,100 @@
-# Ecommerce_Customer_Behaviour
-
 # E-Commerce Customer Churn Prediction
 
 This project builds a machine learning system to predict customer churn in an e-commerce platform. The objective is to identify customers who are likely to leave the platform so that businesses can proactively intervene with retention strategies.
 
-The project implements a complete machine learning workflow including data validation, preprocessing, feature engineering, model training, feature selection, evaluation, and automated reporting. The pipeline is orchestrated using DVC to ensure reproducibility and structured experimentation.
+The project implements a structured machine learning workflow including data validation, preprocessing, feature engineering, model training, feature selection, evaluation, and reporting. The entire pipeline is orchestrated using DVC (Data Version Control) to ensure reproducibility and modular experimentation.
 
 ---
 
 # Problem Statement
 
-Customer churn is a critical challenge for e-commerce companies. Retaining existing customers is significantly cheaper than acquiring new ones, making churn prediction an important business problem.
+Customer churn is a major challenge for e-commerce businesses. Retaining existing customers is significantly cheaper than acquiring new ones, making churn prediction a critical task.
 
-The goal of this project is to:
+The goals of this project are:
 
 - Predict whether a customer will churn
-- Understand behavioral patterns associated with churn
-- Build a reproducible ML pipeline that can be extended for experimentation
+- Identify behavioral patterns associated with churn
+- Build a reproducible machine learning pipeline
+- Compare multiple models and evaluate performance
 
-The project places particular emphasis on minimizing **false negatives**, since failing to detect a churner represents a lost opportunity for retention.
+Special focus is placed on minimizing false negatives because failing to detect a churner means losing the opportunity for retention.
 
 ---
 
 # Dataset Overview
 
-The dataset contains behavioral and demographic information for **50,000 customers**.
+The dataset contains behavioral and demographic data for 50,000 customers.
 
 | Property | Value |
 |--------|--------|
-| Number of rows | 50,000 |
+| Number of customers | 50,000 |
 | Number of features | 25 |
 | Target variable | Customer churn |
 | Retained customers | 71.1% |
 | Churned customers | 28.9% |
 
-The dataset includes features representing:
+The dataset includes information related to:
 
-- Customer demographics  
-- Purchase behavior  
-- Platform engagement  
-- Customer support interactions  
-- Recency and activity signals  
+- Customer demographics
+- Engagement behavior
+- Purchase activity
+- Recency and inactivity signals
+- Customer service interactions
 
 ---
 
 # Exploratory Data Analysis
 
-## Dataset Quality and Structure
+## Dataset Quality
 
-- The dataset contains **50,000 rows and 25 features**.
-- No duplicate rows or columns were detected.
-- No feature had more than **30% missing values**.
-- No feature had a single unique value.
-- Several numerical columns contained **invalid negative values**, which were handled during preprocessing.
+- No duplicate rows or columns were found
+- No features had extreme missingness (>30%)
+- No constant features were detected
+- Some numerical features contained invalid negative values which were corrected during preprocessing
 
-All features were retained initially because they are **business-relevant and potentially predictive**.
+All features were retained initially because they were considered business-relevant and potentially predictive.
 
 ---
 
 ## Churn Distribution
 
-The dataset is **moderately imbalanced**.
+The dataset shows moderate class imbalance.
 
 | Class | Percentage |
 |------|------------|
 | Retained | 71.1% |
 | Churned | 28.9% |
 
-This imbalance is manageable and does not require aggressive resampling.
+This imbalance is manageable without aggressive resampling.
 
-Demographic distributions such as gender, country, quarter, and city show churn rates between **27% and 31%**, indicating demographics alone do not strongly drive churn.
-
----
-
-## Univariate Insights
-
-Most numerical variables exhibit **right-skewed distributions**, indicating heavy-tailed behavior and the presence of outliers.
-
-Engagement-related variables show strong separation between churned and retained customers:
-
-- Login frequency  
-- Session duration  
-- Pages viewed  
-- Email opens  
-- Mobile app usage  
-
-Demographic features such as **Age, Membership Years, and Payment Method Diversity** show minimal separation between churn classes.
+Demographic variables such as gender, country, quarter, and city show churn rates between 27–31%, indicating that demographics alone do not strongly drive churn.
 
 ---
 
-## Bivariate Insights
+## Key Behavioral Insights
 
-Engagement metrics demonstrate the strongest relationship with churn.
+Engagement features show the strongest relationship with churn.
 
-Churned customers show:
+Churned users demonstrate:
 
-- **~28% fewer logins**
+- ~28% fewer logins
 - Fewer pages viewed
 - Lower session duration
-- **20–25% lower mobile and email engagement**
+- ~20–25% lower mobile and email engagement
 
 Recency and friction indicators further increase churn risk:
 
-- Churned users are inactive **4–5 days longer**
-- Cart abandonment is **~10 percentage points higher**
-- Customer service calls are **~33% higher**
-
-Purchase-related metrics become meaningful mainly when combined with engagement or recency.
+- Churned users are inactive 4–5 days longer
+- Cart abandonment is ~10 percentage points higher
+- Customer service calls are ~33% higher
 
 ---
 
 ## Multivariate Behavioral Patterns
 
-The most important churn signals appear when combining multiple behavioral features.
+Important churn signals emerge when combining multiple features.
 
 ### Login Frequency × Recency
-
-This interaction is the strongest predictor.
 
 | Behavior | Churn Rate |
 |--------|-------------|
@@ -125,7 +103,7 @@ This interaction is the strongest predictor.
 
 ### Engagement as a protective factor
 
-High engagement consistently reduces churn even when negative behaviors exist.
+High engagement significantly reduces churn even when other negative behaviors exist.
 
 Examples:
 
@@ -134,64 +112,31 @@ Examples:
 
 ### Session quality and friction
 
-Low session duration combined with high customer service calls produces churn rates exceeding **50%**.
-
-### Engagement amplification
-
-Mobile usage and email engagement reinforce retention when combined with other engagement signals.
-
-### Purchase behavior
-
-Total purchases appear predictive only in isolation; once engagement is controlled, their independent effect weakens.
+Low session duration combined with high service calls produces churn rates exceeding 50%.
 
 ---
 
-## Correlation Structure
+## Final EDA Takeaway
 
-Feature correlation analysis reveals clear behavioral clusters.
+Customer churn is primarily driven by behavioral disengagement and inactivity rather than demographics or tenure.
 
-Engagement features form a highly correlated group:
-
-- Login frequency
-- Session duration
-- Pages viewed
-- Email opens
-- Mobile usage
-
-Friction indicators such as cart abandonment and service calls are negatively correlated with engagement.
-
-Demographic features show near-zero correlation with behavioral metrics.
-
-Financial aggregates represent customer value but are weaker predictors of churn.
-
----
-
-## Key EDA Takeaway
-
-Customer churn is primarily driven by **behavioral disengagement and inactivity**, rather than demographic characteristics.
-
-Engagement acts as the strongest protective factor that mitigates negative signals such as cart abandonment, service issues, or inactivity.
+Engagement acts as the strongest protective factor against churn.
 
 ---
 
 # Machine Learning Pipeline
 
-The project implements a reproducible ML pipeline using **DVC**.
+The project is implemented as a reproducible machine learning pipeline using DVC.
 
 Pipeline stages:
 
-```
-Data Ingestion
-Data Validation
-Data Preprocessing
-Feature Engineering
-Train-Test Split and Encoding
-Decision Tree Training
-Random Forest Training
-Feature Selection
-Model Evaluation
-Report Generation
-```
+Raw Data → Data Ingestion → Data Validation → Data Preprocessing → Feature Engineering → Train/Test Split + Encoding → Model Training → Model Evaluation → Report Generation
+
+Model training includes:
+
+- Decision Tree
+- Random Forest
+- Random Forest with Feature Selection
 
 Each stage is version-controlled and reproducible.
 
@@ -209,47 +154,55 @@ Each stage is version-controlled and reproducible.
 
 # Model Performance
 
-The best-performing model is the **Random Forest classifier with threshold tuning**.
+## Decision Tree
+
+| Metric | Score |
+|------|------|
+| Accuracy | 0.8486 |
+| Precision | 0.7287 |
+| Recall | 0.7585 |
+| F1 Score | 0.7433 |
+| ROC-AUC | 0.8219 |
+
+---
+
+## Random Forest
 
 | Metric | Score |
 |------|------|
 | Accuracy | 0.914 |
-| Precision | 0.862 |
+| Precision | 0.8622 |
 | Recall | 0.836 |
 | F1 Score | 0.8489 |
 | ROC-AUC | 0.9248 |
 
----
-
-# Confusion Matrix
+Confusion matrix values:
 
 | | Predicted Retained | Predicted Churn |
 |---|---|---|
 | Actual Retained | 6724 | 386 |
 | Actual Churn | 474 | 2416 |
 
-The model successfully captures most churners while maintaining strong precision.
-
 ---
 
-# Feature Selection
+## Random Forest + Feature Selection
 
-Random Forest feature importance was used to reduce dimensionality.
+Feature selection reduced the feature space from 32 features to 21 features using cumulative feature importance.
 
-Steps:
+| Metric | Score |
+|------|------|
+| Accuracy | 0.9145 |
+| Precision | 0.8667 |
+| Recall | 0.8322 |
+| F1 Score | 0.8491 |
+| ROC-AUC | 0.9258 |
 
-1. Train Random Forest
-2. Extract feature importance
-3. Compute cumulative importance
-4. Select features covering **90% cumulative importance**
+Confusion errors:
 
-Feature space reduction:
-
-```
-32 features → 21 features
-```
-
-Performance remains comparable while improving model simplicity.
+| Error Type | Count |
+|------------|-------|
+| False Negatives | 485 |
+| False Positives | 370 |
 
 ---
 
@@ -257,67 +210,61 @@ Performance remains comparable while improving model simplicity.
 
 | Model | Accuracy | Precision | Recall | F1 Score | ROC AUC |
 |------|------|------|------|------|------|
-| Decision Tree | 0.89 | 0.84 | 0.80 | 0.82 | 0.90 |
-| Random Forest | 0.914 | 0.862 | 0.836 | 0.8489 | 0.9248 |
-| Random Forest + Feature Selection | 0.918 | 0.9117 | 0.7931 | 0.8483 | 0.9258 |
+| Decision Tree | 0.8486 | 0.7287 | 0.7585 | 0.7433 | 0.8219 |
+| Random Forest | 0.9140 | 0.8622 | 0.8360 | 0.8489 | 0.9248 |
+| Random Forest + Feature Selection | 0.9145 | 0.8667 | 0.8322 | 0.8491 | 0.9258 |
 
-The Random Forest model achieved the best balance between recall and precision while maintaining strong ROC-AUC performance.
+Random Forest and Random Forest with feature selection significantly outperform the baseline Decision Tree.
 
 ---
 
-# Reports Generated
+# Threshold Selection
 
-The pipeline automatically generates evaluation reports.
+The classification threshold was adjusted to 0.40 instead of the default 0.50.
 
-```
-reports/
-├ confusion_matrix.png
-├ roc_curve.png
-├ feature_importance.png
-├ model_comparison_accuracy.png
-├ model_comparison_f1.png
-└ model_comparison_table.csv
-```
+Reason:
 
-These reports provide visual insight into model behavior and feature importance.
+- Lower threshold increases recall
+- More churners are detected
+- False negatives are reduced
+
+Reducing false negatives is important because each missed churner represents a lost retention opportunity.
 
 ---
 
 # Project Structure
 
-```
 Ecommerce_Customer_Behaviour
-│
-├ data_processed
-│   ├ raw
-│   ├ cleaned
-│   ├ featured
-│   └ dependency_split
-│
-├ models
-│   ├ decision_tree
-│   ├ rf_tuned
-│   └ rf_feature_selection
-│
-├ reports
-│
-├ src
-│   ├ data_ingestion.py
-│   ├ data_validation.py
-│   ├ data_preprocessing.py
-│   ├ feature_engineering.py
-│   ├ data_split_encode.py
-│   ├ dt.py
-│   ├ rf.py
-│   ├ rf_fs.py
-│   ├ reporting.py
-│   └ model_comparison.py
-│
-├ params.yaml
-├ dvc.yaml
-├ requirements.txt
-└ README.md
-```
+
+data_processed  
+├ raw  
+├ cleaned  
+├ featured  
+└ dependency_split  
+
+models  
+├ decision_tree  
+├ rf_tuned  
+└ rf_feature_selection  
+
+reports  
+
+src  
+├ data_ingestion.py  
+├ data_validation.py  
+├ data_preprocessing.py  
+├ feature_engineering.py  
+├ data_split_encode.py  
+├ dt.py  
+├ rf.py  
+├ rf_fs.py  
+├ reporting.py  
+└ model_comparison.py  
+
+params.yaml  
+dvc.yaml  
+requirements.txt  
+README.md  
 
 ---
 
@@ -327,11 +274,9 @@ The entire pipeline can be reproduced using DVC.
 
 Run:
 
-```
 dvc repro
-```
 
-DVC will execute every stage defined in `dvc.yaml` and regenerate models and reports.
+DVC executes all pipeline stages defined in dvc.yaml.
 
 ---
 
@@ -361,64 +306,40 @@ Git
 
 # Running the Project
 
-Clone the repository:
+Clone the repository
 
-```
 git clone https://github.com/<your-username>/Ecommerce_Customer_Behaviour.git
-```
 
-Navigate to the project directory:
+Navigate to the project directory
 
-```
 cd Ecommerce_Customer_Behaviour
-```
 
-Install dependencies:
+Install dependencies
 
-```
 pip install -r requirements.txt
-```
 
-Run the pipeline:
+Run the full pipeline
 
-```
 dvc repro
-```
 
 ---
-
-# Future Improvements
-
-Potential extensions include:
-
-- Automated hyperparameter optimization
-- Experiment tracking using MLflow
-- Data drift monitoring
-- API-based model deployment
-- Business intelligence dashboard for churn insights
-
----
-
 
 # Business Impact
 
-Churn prediction enables businesses to proactively retain high-risk customers.
+Churn prediction enables businesses to proactively retain customers who are at risk of leaving.
 
 Potential applications include:
 
-• Targeted retention campaigns for customers predicted to churn  
-• Personalized offers or discounts for disengaged users  
-• Early detection of customer dissatisfaction  
-• Prioritization of high-value churn risks for customer support teams  
+- Targeted retention campaigns
+- Personalized discounts for disengaged users
+- Early detection of customer dissatisfaction
+- Prioritization of high-risk customers for support teams
 
-Reducing churn by even a small percentage can significantly improve long-term revenue and customer lifetime value.
-
+Reducing churn even slightly can significantly improve long-term revenue and customer lifetime value.
 
 ---
 
-
 # Author
 
-Ankit Show
-
+Ankit Show  
 Data Science and Machine Learning
