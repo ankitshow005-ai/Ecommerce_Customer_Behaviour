@@ -3,20 +3,21 @@ import json
 import pickle
 import logging
 import yaml
-import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
     recall_score,
-    f1_score
+    f1_score,
+    roc_auc_score,
+    confusion_matrix
 )
 
-# ============================================================
-# LOGGING SETUP
-# ============================================================
 
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -25,6 +26,7 @@ logger = logging.getLogger("random_forest_feature_selection")
 logger.setLevel(logging.INFO)
 
 if not logger.handlers:
+
     ch = logging.StreamHandler()
     fh = logging.FileHandler(os.path.join(LOG_DIR, "rf_fs.log"))
 
@@ -38,185 +40,161 @@ if not logger.handlers:
     logger.addHandler(ch)
     logger.addHandler(fh)
 
-# ============================================================
-# DATA LOADING
-# ============================================================
 
-def load_dependency_split(split_dir: str):
+def load_split(split_dir):
+
     X_train = pd.read_csv(os.path.join(split_dir, "X_train.csv"))
     X_test = pd.read_csv(os.path.join(split_dir, "X_test.csv"))
+
     y_train = pd.read_csv(os.path.join(split_dir, "y_train.csv")).squeeze()
     y_test = pd.read_csv(os.path.join(split_dir, "y_test.csv")).squeeze()
 
-    logger.info("Loaded dependency split data")
-    logger.info(f"X_train shape: {X_train.shape}")
-    logger.info(f"X_test shape: {X_test.shape}")
-
     return X_train, X_test, y_train, y_test
 
-# ============================================================
-# PARAMS LOADING
-# ============================================================
 
-def load_rf_config():
-    with open("params.yaml", "r") as f:
+def load_config():
+
+    with open("params.yaml") as f:
         params = yaml.safe_load(f)
 
-    return params["random_forest"]
+    return params
 
-# ============================================================
-# TRAIN BASE RF (FOR FEATURE IMPORTANCE)
-# ============================================================
 
-def train_base_rf(X_train, y_train, config):
-    """
-    Train RF using tuned structural params and final n_estimators.
-    """
-    logger.info("Training Random Forest for feature importance")
+def train_rf(X_train, y_train, config):
 
     model = RandomForestClassifier(
-        **config["final_params"],
-        random_state=42,
-        n_jobs=-1
+        **config["random_forest"]["final_params"],
+        random_state=42
     )
 
     model.fit(X_train, y_train)
+
     return model
 
-# ============================================================
-# FEATURE IMPORTANCE LOGIC
-# ============================================================
 
-def extract_feature_importance(model, feature_names):
-    importances = model.feature_importances_
+def extract_importance(model, features):
 
     df = pd.DataFrame({
-        "feature": feature_names,
-        "importance": importances
-    }).sort_values(by="importance", ascending=False)
+        "feature": features,
+        "importance": model.feature_importances_
+    }).sort_values("importance", ascending=False)
 
     df["importance_pct"] = df["importance"] * 100
     df["cumulative_importance"] = df["importance_pct"].cumsum()
 
-    return df.reset_index(drop=True)
+    return df
 
 
-def select_features(df, threshold=90.0):
+def plot_feature_importance(df):
+
+    os.makedirs("reports", exist_ok=True)
+
+    top_features = df.head(15)
+
+    plt.figure(figsize=(10,6))
+
+    plt.barh(
+        top_features["feature"],
+        top_features["importance"]
+    )
+
+    plt.gca().invert_yaxis()
+
+    plt.title("Random Forest Feature Importance")
+
+    plt.xlabel("Importance")
+
+    plt.tight_layout()
+
+    plt.savefig("reports/feature_importance.png")
+
+    plt.close()
+
+
+def select_features(df, threshold):
+
     selected = df[df["cumulative_importance"] <= threshold]["feature"].tolist()
-    logger.info(f"Selected {len(selected)} features using {threshold}% threshold")
+
+    logger.info(f"{len(selected)} features selected")
+
     return selected
 
-# ============================================================
-# FINAL MODEL TRAINING
-# ============================================================
 
-def train_final_model(X_train, y_train, config):
-    model = RandomForestClassifier(
-        **config["final_params"],
-        random_state=42,
-        n_jobs=-1
-    )
-    model.fit(X_train, y_train)
-    return model
+def evaluate(model, X_test, y_test, threshold):
 
-# ============================================================
-# EVALUATION
-# ============================================================
+    y_prob = model.predict_proba(X_test)[:,1]
+    y_pred = (y_prob >= threshold).astype(int)
 
-def evaluate_model(model, X_test, y_test):
-    y_pred = model.predict(X_test)
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
 
     metrics = {
+
+        "threshold": threshold,
         "accuracy": round(accuracy_score(y_test, y_pred), 4),
         "precision": round(precision_score(y_test, y_pred), 4),
         "recall": round(recall_score(y_test, y_pred), 4),
         "f1_score": round(f1_score(y_test, y_pred), 4),
+        "roc_auc": round(roc_auc_score(y_test, y_prob), 4),
+
+        "false_negatives": int(fn),
+        "false_positives": int(fp)
+
     }
 
-    logger.info(f"Evaluation metrics: {metrics}")
     return metrics
 
-# ============================================================
-# SAVE ARTIFACTS
-# ============================================================
 
-def save_artifacts(
-    model,
-    metrics,
-    importance_df,
-    selected_features,
-    output_dir
-):
-    os.makedirs(output_dir, exist_ok=True)
+def save_artifacts(model, metrics, importance_df, features, out_dir):
 
-    with open(os.path.join(output_dir, "model.pkl"), "wb") as f:
+    os.makedirs(out_dir, exist_ok=True)
+
+    with open(os.path.join(out_dir, "model.pkl"), "wb") as f:
         pickle.dump(model, f)
 
-    with open(os.path.join(output_dir, "metrics.json"), "w") as f:
+    with open(os.path.join(out_dir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
 
     importance_df.to_csv(
-        os.path.join(output_dir, "feature_importance.csv"),
+        os.path.join(out_dir, "feature_importance.csv"),
         index=False
     )
 
-    with open(os.path.join(output_dir, "selected_features.json"), "w") as f:
-        json.dump(selected_features, f, indent=4)
+    with open(os.path.join(out_dir, "selected_features.json"), "w") as f:
+        json.dump(features, f, indent=4)
 
-    logger.info("All artifacts saved successfully")
-
-# ============================================================
-# MAIN PIPELINE
-# ============================================================
 
 def main():
+
     SPLIT_DIR = "data_processed/dependency_split"
     OUTPUT_DIR = "models/rf_feature_selection"
-    FEATURE_THRESHOLD = 90.0
 
-    logger.info("Starting RF Feature Selection pipeline")
+    config = load_config()
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    threshold = config["random_forest"]["threshold"]["value"]
+    feature_threshold = config["feature_selection"]["importance_threshold"]
 
-    X_train, X_test, y_train, y_test = load_dependency_split(SPLIT_DIR)
-    config = load_rf_config()
+    X_train, X_test, y_train, y_test = load_split(SPLIT_DIR)
 
-    # Train RF for importance
-    base_model = train_base_rf(X_train, y_train, config)
+    base_model = train_rf(X_train, y_train, config)
 
-    # Feature importance
-    importance_df = extract_feature_importance(
-        base_model,
-        X_train.columns.tolist()
-    )
+    importance_df = extract_importance(base_model, X_train.columns)
 
-    selected_features = select_features(
-        importance_df,
-        FEATURE_THRESHOLD
-    )
+    # CREATE FEATURE IMPORTANCE PLOT
+    plot_feature_importance(importance_df)
 
-    # Filter data
-    X_train_sel = X_train[selected_features]
-    X_test_sel = X_test[selected_features]
+    selected = select_features(importance_df, feature_threshold)
 
-    # Train final model
-    final_model = train_final_model(X_train_sel, y_train, config)
+    X_train_sel = X_train[selected]
+    X_test_sel = X_test[selected]
 
-    metrics = evaluate_model(final_model, X_test_sel, y_test)
+    final_model = train_rf(X_train_sel, y_train, config)
 
-    save_artifacts(
-        final_model,
-        metrics,
-        importance_df,
-        selected_features,
-        OUTPUT_DIR
-    )
+    metrics = evaluate(final_model, X_test_sel, y_test, threshold)
 
-    logger.info("RF Feature Selection pipeline completed successfully")
+    save_artifacts(final_model, metrics, importance_df, selected, OUTPUT_DIR)
 
-# ============================================================
-# ENTRY POINT
-# ============================================================
+    logger.info("RF Feature Selection completed")
+
 
 if __name__ == "__main__":
     main()

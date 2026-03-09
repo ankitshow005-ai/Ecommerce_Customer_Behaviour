@@ -94,8 +94,8 @@ stages:
       nfiles: 5
     - path: src/dt.py
       hash: md5
-      md5: a9dd5e5160031442d5f67cb53a83921a
-      size: 5251
+      md5: 4d0dbddc0282c1f6cd9963883397541f
+      size: 4475
     params:
       params.yaml:
         decision_tree:
@@ -132,21 +132,29 @@ stages:
     outs:
     - path: models/decision_tree
       hash: md5
-      md5: f54fbda9962f59ec2a9c9bcc8e9dffd0.dir
-      size: 518169
+      md5: 4995c520937bb5ddec80ceecf818106d.dir
+      size: 518193
       nfiles: 2
   random_forest:
-    cmd: python src/rf.py
+    cmd: python -m src.rf
     deps:
     - path: data_processed/dependency_split
       hash: md5
       md5: 39cc46fdb729a6aaaaa3e475201be082.dir
       size: 7812039
       nfiles: 5
+    - path: params.yaml
+      hash: md5
+      md5: 0b8a3c79b2b2f306e196719fe53985aa
+      size: 1463
+    - path: src/reporting.py
+      hash: md5
+      md5: d784356764276145d53d5e5a8b043059
+      size: 1538
     - path: src/rf.py
       hash: md5
-      md5: 206b962c724ecc4f89ef04da90b9c37d
-      size: 7775
+      md5: eec5d92a376336e8f36f7c346617a8c4
+      size: 3699
     params:
       params.yaml:
         random_forest:
@@ -171,6 +179,13 @@ stages:
           cv: 5
           final_params:
             n_estimators: 250
+            bootstrap: false
+            criterion: entropy
+            max_features: sqrt
+            max_depth:
+            min_samples_split: 2
+            min_samples_leaf: 1
+            n_jobs: -1
           threshold:
             enabled: true
             value: 0.4
@@ -179,11 +194,19 @@ stages:
               end: 0.6
               step: 0.05
     outs:
-    - path: models/random_forest
+    - path: models/rf_tuned
       hash: md5
-      md5: 5d5f7ff9f1bccd799c17a081231d44ff.dir
-      size: 183145979
-      nfiles: 3
+      md5: d7e5b672203a6f802a69eee155d8425e.dir
+      size: 183145771
+      nfiles: 2
+    - path: reports/confusion_matrix.png
+      hash: md5
+      md5: e9cb9d8380ab6fe2411e6ab19f8b3e7d
+      size: 20550
+    - path: reports/roc_curve.png
+      hash: md5
+      md5: 93f4520a30bb7ed382482505130a2e5e
+      size: 29451
   rf_feature_selection:
     cmd: python src/rf_fs.py
     deps:
@@ -192,17 +215,68 @@ stages:
       md5: 39cc46fdb729a6aaaaa3e475201be082.dir
       size: 7812039
       nfiles: 5
+    - path: params.yaml
+      hash: md5
+      md5: 0b8a3c79b2b2f306e196719fe53985aa
+      size: 1463
     - path: src/rf_fs.py
       hash: md5
-      md5: 822f922b6cb9af445338d9f24018eb75
-      size: 6526
+      md5: 2476e65d44a76437170b244e6181ea40
+      size: 4847
     params:
       params.yaml:
+        feature_selection.importance_threshold: 90
         random_forest.final_params:
           n_estimators: 250
+          bootstrap: false
+          criterion: entropy
+          max_features: sqrt
+          max_depth:
+          min_samples_split: 2
+          min_samples_leaf: 1
+          n_jobs: -1
     outs:
     - path: models/rf_feature_selection
       hash: md5
-      md5: 045ee01bdb4f9d35ea5568ec0c95e16d.dir
-      size: 130818482
+      md5: 0608a207dd28d7db7a56b6fa6808016c.dir
+      size: 174237169
       nfiles: 4
+    - path: reports/feature_importance.png
+      hash: md5
+      md5: f4f05f50777d49800ef3a7a21fb1e380
+      size: 39510
+  model_comparison:
+    cmd: python src/model_comparison.py
+    deps:
+    - path: models/decision_tree
+      hash: md5
+      md5: 4995c520937bb5ddec80ceecf818106d.dir
+      size: 518193
+      nfiles: 2
+    - path: models/rf_feature_selection
+      hash: md5
+      md5: 0608a207dd28d7db7a56b6fa6808016c.dir
+      size: 174237169
+      nfiles: 4
+    - path: models/rf_tuned
+      hash: md5
+      md5: d7e5b672203a6f802a69eee155d8425e.dir
+      size: 183145771
+      nfiles: 2
+    - path: src/model_comparison.py
+      hash: md5
+      md5: f931279c25aa9dc61d6bb2b439fee714
+      size: 1798
+    outs:
+    - path: reports/model_comparison_accuracy.png
+      hash: md5
+      md5: e5212f840df31a507be5dec94efab4e7
+      size: 15236
+    - path: reports/model_comparison_f1.png
+      hash: md5
+      md5: 64b68a8866a11f8f361825f2f0ee9c90
+      size: 16758
+    - path: reports/model_comparison_table.csv
+      hash: md5
+      md5: 645b51bb40cafddbb695851e1af050b4
+      size: 207

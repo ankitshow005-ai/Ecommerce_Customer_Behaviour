@@ -1,61 +1,96 @@
 stages:
+
   data_ingestion:
     cmd: python src/data_ingestion.py
     deps:
-    - raw_data_location
-    - src/data_ingestion.py
+      - raw_data_location
+      - src/data_ingestion.py
     outs:
-    - data_processed/raw
+      - data_processed/raw
+
+
   data_validation:
     cmd: python src/data_validation.py
     deps:
-    - data_processed/raw
-    - src/data_validation.py
+      - data_processed/raw
+      - src/data_validation.py
+
+
   data_preprocessing:
     cmd: python src/data_preprocessing.py
     deps:
-    - data_processed/raw
-    - src/data_preprocessing.py
+      - data_processed/raw
+      - src/data_preprocessing.py
     outs:
-    - data_processed/cleaned
+      - data_processed/cleaned
+
+
   feature_engineering:
     cmd: python src/feature_engineering.py
     deps:
-    - data_processed/cleaned
-    - src/feature_engineering.py
+      - data_processed/cleaned
+      - src/feature_engineering.py
     outs:
-    - data_processed/featured
+      - data_processed/featured
+
+
   data_split_encode:
     cmd: python src/data_split_encode.py
     deps:
-    - data_processed/featured
-    - src/data_split_encode.py
+      - data_processed/featured
+      - src/data_split_encode.py
     outs:
-    - data_processed/dependency_split
+      - data_processed/dependency_split
+
+
   decision_tree:
     cmd: python src/dt.py
     deps:
-    - data_processed/dependency_split
-    - src/dt.py
+      - data_processed/dependency_split
+      - src/dt.py
     params:
-    - decision_tree
+      - decision_tree
     outs:
-    - models/decision_tree
+      - models/decision_tree
+
+
   random_forest:
-    cmd: python src/rf.py
+    cmd: python -m src.rf
     deps:
-    - data_processed/dependency_split
-    - src/rf.py
+      - data_processed/dependency_split
+      - src/rf.py
+      - src/reporting.py
+      - params.yaml
     params:
-    - random_forest
+      - random_forest
     outs:
-    - models/random_forest
+      - models/rf_tuned
+      - reports/confusion_matrix.png
+      - reports/roc_curve.png
+
+
   rf_feature_selection:
     cmd: python src/rf_fs.py
     deps:
-    - data_processed/dependency_split
-    - src/rf_fs.py
+      - data_processed/dependency_split
+      - src/rf_fs.py
+      - params.yaml
     params:
-    - random_forest.final_params
+      - random_forest.final_params
+      - feature_selection.importance_threshold
     outs:
-    - models/rf_feature_selection
+      - models/rf_feature_selection
+      - reports/feature_importance.png
+
+
+  model_comparison:
+    cmd: python src/model_comparison.py
+    deps:
+      - src/model_comparison.py
+      - models/decision_tree
+      - models/rf_tuned
+      - models/rf_feature_selection
+    outs:
+      - reports/model_comparison_accuracy.png
+      - reports/model_comparison_f1.png
+      - reports/model_comparison_table.csv
