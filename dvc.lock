@@ -5,9 +5,9 @@ stages:
     deps:
     - path: raw_data_location
       hash: md5
-      md5: 249d87a8320592b91ab08407a4c27708.dir
-      size: 6112281
-      nfiles: 1
+      md5: 379dd9e9608e7ee23739c1e5e53a3963.dir
+      size: 6112405
+      nfiles: 2
     - path: src/data_ingestion.py
       hash: md5
       md5: 869277bee35d61cb24579aef318dd35a
